@@ -1,1 +1,39 @@
 # Terraform-Rev
+This what I tried to do
+resource "aws_s3_bucket" "wee_wee" {
+  bucket = var.bucket_name
+  acl    = "private"
+  server_side_encryption_configuration{
+    rule{
+      apply_server_side_encryption_by_default {
+        kms_master_key_id = aws_kms_key.mykey.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+    terraform = true
+  }
+}
+resource "aws_kms_key" "mykey" {
+  description             = "This key is used to encrypt bucket objects"
+  enable_key_rotation = true
+  policy = data.aws_iam_policy_document.key_policy.json
+}
+data "aws_caller_identity" "current"{}
+
+data "aws_iam_policy_document" "key_policy"{
+    statement{
+        sid = "Allow root access to this key"
+        effect = "Allow"
+        principals{
+            type = "AWS"
+            identifiers = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"]
+        }
+        actions = ["kms:*"]
+        resources = ["*"]
+    }
+}
